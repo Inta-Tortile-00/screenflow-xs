@@ -52,11 +52,16 @@ jobs:
           test -x "$AIDL"
           echo "$SDK/build-tools/33.0.2" >> "$GITHUB_PATH"
           echo "AIDL found at $AIDL"
-
+      - name: Verify Java installation
+        shell: bash
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          javac -version
+          test -x "$JAVA_HOME/bin/java"
+          test -x "$JAVA_HOME/bin/javac"
       - name: Build debug APK
         shell: bash
-        env:
-          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
           set -o pipefail
           buildozer -v android debug 2>&1 | tee build.log
