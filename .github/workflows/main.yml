@@ -82,30 +82,43 @@ jobs:
           python -m pip install --user 'buildozer==1.5.0' 'cython==0.29.34'
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install Android SDK tools and AIDL
+      - name: Configure Android SDK and legacy compatibility
         shell: bash
         run: |
-          set -euo pipefail
-          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          set -e
+
+          SDK=/usr/local/lib/android/sdk
           SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$(command -v sdkmanager)"
-          fi
-          "$SDKMANAGER" --sdk_root="$SDK" 'platform-tools' 'platforms;android-33' 'build-tools;33.0.2'
-          AIDL="$SDK/build-tools/33.0.2/aidl"
-          test -x "$AIDL"
-          echo "$SDK/build-tools/33.0.2" >> "$GITHUB_PATH"
-          echo "AIDL found at $AIDL"
-      - name: Verify Java installation
+
+          test -x "$SDKMANAGER"
+
+          "$SDKMANAGER" \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "platform-tools"
+
+          test -x "$SDK/build-tools/33.0.2/aidl"
+
+          mkdir -p "$SDK/tools/bin"
+
+          printf '%s\n' \
+            '#!/bin/bash' \
+            'exec /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/usr/local/lib/android/sdk "$@"' \
+            > "$SDK/tools/bin/sdkmanager"
+
+          chmod +x "$SDK/tools/bin/sdkmanager"
+
+          "$SDK/tools/bin/sdkmanager" --version
+
+          echo "Android SDK verification successful."
+
+      - name: Build Android APK
         shell: bash
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
-          echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-          javac -version
-          test -x "$JAVA_HOME/bin/java"
-          test -x "$JAVA_HOME/bin/javac"
+          buildozer -v android debug
       - name: Build debug APK
         shell: bash
         run: |
