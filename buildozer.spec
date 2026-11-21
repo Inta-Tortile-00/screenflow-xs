@@ -8,11 +8,14 @@ version = 0.3.0
 requirements = python3,kivy,pyjnius
 orientation = portrait
 fullscreen = 0
-android.minapi = 28
-android.api = 33
 android.permissions = READ_EXTERNAL_STORAGE
 android.archs = arm64-v8a,armeabi-v7a
 android.sdk_path = /usr/local/lib/android/sdk
+android.api = 33
+android.minapi = 28
+android.ndk = 25b
+android.accept_sdk_license = True
+android.skip_update = True
 
 [buildozer]
 log_level = 2
