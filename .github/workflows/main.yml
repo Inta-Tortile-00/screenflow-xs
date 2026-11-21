@@ -25,10 +25,11 @@ jobs:
 
       - name: Install Buildozer in isolated Python 3.11 environment
         run: |
-          python -m venv "$HOME/screenflow-build-venv"
+          python -m venv --system-site-packages "$HOME/screenflow-build-venv"
           echo "$HOME/screenflow-build-venv/bin" >> "$GITHUB_PATH"
           "$HOME/screenflow-build-venv/bin/python" -m pip install --upgrade 'pip==24.0' 'setuptools<75' wheel
           "$HOME/screenflow-build-venv/bin/python" -m pip install 'buildozer==1.5.0' 'cython==0.29.34'
+          "$HOME/screenflow-build-venv/bin/python" -m site
           "$HOME/screenflow-build-venv/bin/python" --version
           "$HOME/screenflow-build-venv/bin/buildozer" --version
 
