@@ -12,6 +12,7 @@ android.minapi = 28
 android.api = 33
 android.permissions = READ_EXTERNAL_STORAGE
 android.archs = arm64-v8a,armeabi-v7a
+android.sdk_path = /usr/local/lib/android/sdk
 
 [buildozer]
 log_level = 2
