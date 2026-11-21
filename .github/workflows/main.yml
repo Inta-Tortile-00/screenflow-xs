@@ -29,7 +29,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config build-essential cmake libffi-dev libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5
+      - name: Verify Android SDK and AIDL
+        shell: bash
+        run: |
+          set -e
 
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+
+          echo "SDK directory: $ANDROID_HOME"
+
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+
+          "$SDKMANAGER" \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "platform-tools"
+
+          AIDL="$ANDROID_HOME/build-tools/33.0.2/aidl"
+
+          if [ ! -x "$AIDL" ]; then
+            echo "ERROR: AIDL missing from Android SDK"
+            exit 1
+          fi
+
+          echo "AIDL executable found: $AIDL"
+          ls -l "$AIDL"
       - name: Install Python build tools
         run: |
           python -m pip install --upgrade 'pip==24.0' 'setuptools<75' 'wheel==0.43.0'
