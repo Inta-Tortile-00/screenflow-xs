@@ -23,15 +23,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf automake libtool pkg-config build-essential cmake libffi-dev libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5
 
-      - name: Install Buildozer in isolated Python 3.11 environment
+      - name: Install Buildozer using Python 3.11 (no venv)
         run: |
-          python -m venv --system-site-packages "$HOME/screenflow-build-venv"
-          echo "$HOME/screenflow-build-venv/bin" >> "$GITHUB_PATH"
-          "$HOME/screenflow-build-venv/bin/python" -m pip install --upgrade 'pip==24.0' 'setuptools<75' wheel
-          "$HOME/screenflow-build-venv/bin/python" -m pip install 'buildozer==1.5.0' 'cython==0.29.34'
-          "$HOME/screenflow-build-venv/bin/python" -m site
-          "$HOME/screenflow-build-venv/bin/python" --version
-          "$HOME/screenflow-build-venv/bin/buildozer" --version
+          python -m pip install --upgrade 'pip==24.0' 'setuptools<75' 'wheel==0.43.0'
+          python -m pip install --user 'buildozer==1.5.0' 'cython==0.29.34'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          python -m site
+          python --version
+          "$HOME/.local/bin/buildozer" --version
 
       - name: Build debug APK
         env:
