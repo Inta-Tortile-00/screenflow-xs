@@ -8,30 +8,36 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Check out project
         uses: actions/checkout@v4
 
+      - name: Use Python 3.11 for Buildozer
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install system build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip python3-venv python3-dev \
-            autoconf automake libtool pkg-config build-essential cmake libffi-dev libssl-dev \
-            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5
+          sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf automake libtool pkg-config build-essential cmake libffi-dev libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5
 
-      - name: Install Buildozer and Cython
+      - name: Install Buildozer in isolated Python 3.11 environment
         run: |
-          python3 -m pip install --user --upgrade pip setuptools wheel
-          python3 -m pip install --user buildozer 'cython<3'
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          python -m venv "$HOME/screenflow-build-venv"
+          echo "$HOME/screenflow-build-venv/bin" >> "$GITHUB_PATH"
+          "$HOME/screenflow-build-venv/bin/python" -m pip install --upgrade 'pip==24.0' 'setuptools<75' wheel
+          "$HOME/screenflow-build-venv/bin/python" -m pip install 'buildozer==1.5.0' 'cython==0.29.34'
+          "$HOME/screenflow-build-venv/bin/python" --version
+          "$HOME/screenflow-build-venv/bin/buildozer" --version
 
       - name: Build debug APK
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          yes | buildozer -v android debug 2>&1 | tee build.log
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee build.log
           test -n "$(find bin -maxdepth 1 -name '*.apk' -print -quit)"
 
       - name: Upload APK
