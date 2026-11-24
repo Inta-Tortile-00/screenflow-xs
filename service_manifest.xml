@@ -1,0 +1,1 @@
+<service android:name="org.example.screenflow.RotationService" android:exported="false" android:process=":rotation" />

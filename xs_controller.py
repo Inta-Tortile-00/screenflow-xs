@@ -38,7 +38,7 @@ class ModuleController:
             activity = autoclass('org.kivy.android.PythonActivity').mActivity
             pm = activity.getPackageManager()
             # Package ID must be verified against the installed APK on target device.
-            for pkg in ('org.jwz.xscreensaver',):
+            for pkg in ('org.jwz.android.xscreensaver',):
                 intent = pm.getLaunchIntentForPackage(pkg)
                 if intent is not None:
                     activity.startActivity(intent)

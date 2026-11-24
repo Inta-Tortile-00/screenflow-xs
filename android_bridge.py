@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-PKG = 'org.jwz.xscreensaver'
+PKG = 'org.jwz.android.xscreensaver'
 WALLPAPER_ACTION = 'android.service.wallpaper.WallpaperService'
 DREAM_ACTION = 'android.service.dreams.DreamService'
 

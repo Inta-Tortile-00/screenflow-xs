@@ -1,0 +1,13 @@
+
+.buildozer/
+bin/
+.gradle/
+__pycache__/
+*.pyc
+*.apk
+*.aab
+*.log
+*.bak
+*.bak.*
+.venv/
+venv/

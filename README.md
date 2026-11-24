@@ -39,3 +39,6 @@ Find APK under `bin/`. `android.api=33`, `android.minapi=28`; Android 9 is the m
 3. Tap Next and check whether Fire OS opens the correct confirmation screen.
 4. Switch to Dream mode; Discover; open diagnostics/settings.
 5. Report discovery counts and any errors before enabling timed requests.
+
+## v0.4.0 experimental native rotation
+Corrected package ID; class names are discovered from PackageManager. Background start uses the Seconds field and starts a separate Java foreground service. Tap Apply in its notification to open the system wallpaper confirmation; Next selects another candidate, Pause toggles scheduling, Stop ends the service. Queue and selection count persist. Timer is best effort during sleep; no boot receiver or silent live wallpaper changes. Local slideshow remains in the original Kivy UI. Native Android compilation and device testing are not yet verified. On Android 13 notification permission may need to be granted in settings. Fire OS 7 does not require that runtime permission.

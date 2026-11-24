@@ -139,8 +139,36 @@ class ScreenFlow(App):
         diag.bind(on_release=self.diagnostic_action)
         xs.add_widget(diag)
         root.add_widget(xs)
+        native = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(4))
+        for caption, action in [('Background start', 'START'), ('Background stop', 'STOP')]:
+            button = Button(text=caption)
+            button.bind(on_release=lambda _, a=action: self.native_rotation(a))
+            native.add_widget(button)
+        root.add_widget(native)
         Clock.schedule_interval(self.tick, 0.25)
         return root
+
+    def native_rotation(self, action):
+        if platform != 'android':
+            self.module_status.text = 'Android only'
+            return
+        try:
+            from jnius import autoclass
+            activity = autoclass('org.kivy.android.PythonActivity').mActivity
+            intent = autoclass('android.content.Intent')()
+            intent.setClassName(activity.getPackageName(), 'org.example.screenflow.RotationService')
+            intent.setAction(action)
+            if action == 'START':
+                self.xs_clock.stop()
+                self.xs_timer_button.text = 'Timer: OFF'
+                intent.putExtra('interval', int(min(86400, self.read_interval()) * 1000))
+                activity.startForegroundService(intent)
+                self.module_status.text = 'Background rotation requested; tap notification Apply to confirm.'
+            else:
+                activity.startService(intent)
+                self.module_status.text = 'Background stop requested'
+        except Exception as exc:
+            self.module_status.text = str(exc)
 
     def default_folder(self):
         if platform == 'android':
