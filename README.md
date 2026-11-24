@@ -1,6 +1,8 @@
-# ScreenFlow XS Controller 0.4.0 — source prototype
+# ScreenFlow XS Controller 0.5.2 — source prototype
 
 Android 9 / Fire OS 7-oriented Kivy project. This is source, **not a compiled or device-tested APK**.
+
+**I haven't tested on other Android environments, when I do I will break compatibility down into a chart. So far, it seems to work fine up to Android 18 because it is built with NDK to do so.**
 
 <img width="1200" height="1920" alt="Screenshot_20261123-182207" src="https://github.com/user-attachments/assets/9787ab05-f861-4614-b0fc-f3ece077b700" />
 
@@ -20,6 +22,10 @@ Android 9 / Fire OS 7-oriented Kivy project. This is source, **not a compiled or
 - PackageManager results may differ from the static APK candidates; the runtime discovery results are authoritative.
 - The uploaded APK was inspected for candidate class-name strings, not fully decompiled; `module_candidates.json` is informational only.
 
+## Release
+- Install APK and viola! (soon enough widgetry with stats.)
+- Be sure to test features exhaustively to find bugs and test software. Enjoy.
+  
 ## Build
 On Linux with Java, Android SDK/NDK and Buildozer installed:
 
