@@ -1,6 +1,8 @@
-# ScreenFlow XS Controller 0.3.0 — source prototype
+# ScreenFlow XS Controller 0.4.0 — source prototype
 
 Android 9 / Fire OS 7-oriented Kivy project. This is source, **not a compiled or device-tested APK**.
+
+<img width="1200" height="1920" alt="Screenshot_20261123-182207" src="https://github.com/user-attachments/assets/9787ab05-f861-4614-b0fc-f3ece077b700" />
 
 ## Features
 - Existing local-image slideshow with interval, pause, next, shuffle and notification.
