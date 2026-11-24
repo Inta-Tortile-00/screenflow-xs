@@ -44,3 +44,17 @@ Find APK under `bin/`. `android.api=33`, `android.minapi=28`; Android 9 is the m
 
 ## v0.4.0 experimental native rotation
 Corrected package ID; class names are discovered from PackageManager. Background start uses the Seconds field and starts a separate Java foreground service. Tap Apply in its notification to open the system wallpaper confirmation; Next selects another candidate, Pause toggles scheduling, Stop ends the service. Queue and selection count persist. Timer is best effort during sleep; no boot receiver or silent live wallpaper changes. Local slideshow remains in the original Kivy UI. Native Android compilation and device testing are not yet verified. On Android 13 notification permission may need to be granted in settings. Fire OS 7 does not require that runtime permission.
+
+## v0.5.0 experimental accessibility rotation
+
+Enable ScreenFlow wallpaper automation in Android Accessibility settings, return to ScreenFlow, enable Auto XPath and press Background start. The primary selector is extracted from the supplied Automate flow. The optional secondary selector is `(//android.widget.ListView[@android:id='@android:id/list']/android.widget.RelativeLayout)[4]`; leave blank until you have manually verified the fourth row is the desired destination. The XScreensaver app's own apply button is not clicked by this version: it uses the direct system preview instead. Only the system picker is inspected, during a pending rotation. Locked or sleeping devices skip automatic attempts; the notification Apply remains available. Background activity launches may be restricted by Fire OS. Auto settings are applied when Background start is pressed. Stop or Pause cancels pending clicks. Selection count is not a verified application count; verification is logged when available.
+
+Build with the existing environment and `buildozer -v android debug`. The experimental p4a hook registers both services in the cached manifest template; `android.add_resources` supplies the accessibility XML. Verify generated manifest with xmllint and inspect service declarations. If hook timing or resource handling differs in your p4a version, report the build log. Python syntax checked; Android compilation/device behavior not tested here.
+
+Diagnostics: `adb logcat -s ScreenFlow AndroidRuntime`.
+
+### v0.5.1
+- Interval input is in minutes (0.5–1440), default 1; requests a numeric keyboard with decimal input.
+- App settings are saved privately in settings.json, automatically and via Save settings. Restart background rotation to apply edits to the native service.
+- Only the primary wallpaper XPath is executed; secondary selector removed. Picker still takes foreground focus.
+- Existing native rotation state is retained; UI settings start with defaults on first upgrade.

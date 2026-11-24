@@ -1,4 +1,6 @@
 import os
+import json
+import math
 import random
 import time
 from pathlib import Path
@@ -11,11 +13,14 @@ from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.spinner import Spinner
 from kivy.metrics import dp
 from kivy.utils import platform
 from xs_controller import ModuleController
 from android_bridge import AndroidBridge
 from queue_engine import ShuffleQueue, IntervalClock
+
+DEFAULT_XPATH = "//android.widget.Button[@android:id='@com.android.wallpaper.livepicker:id/set_wallpaper']"
 
 EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif'}
 
@@ -82,13 +87,15 @@ class ScreenFlow(App):
         self.transitions = 0
         self.started_at = None
         self.running = False
-        self.interval = 30.0
+        self.interval = 60.0
         self.deadline = None
         self.notifier = Notifier()
+        self.settings_path = Path(self.user_data_dir) / "settings.json"
+        saved = self.load_settings()
 
         root = BoxLayout(orientation='vertical', padding=dp(8), spacing=dp(6))
         controls = BoxLayout(size_hint_y=None, height=dp(46), spacing=dp(5))
-        self.folder_input = TextInput(text=self.default_folder(), multiline=False, hint_text='Image directory')
+        self.folder_input = TextInput(text=saved.get("folder", self.default_folder()), multiline=False, hint_text='Image directory')
         scan = Button(text='Load', size_hint_x=None, width=dp(75))
         scan.bind(on_release=lambda *_: self.load_folder())
         controls.add_widget(self.folder_input)
@@ -103,11 +110,11 @@ class ScreenFlow(App):
         root.add_widget(self.stats)
 
         options = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(5))
-        options.add_widget(Label(text='Seconds:', size_hint_x=None, width=dp(75)))
-        self.interval_input = TextInput(text='30', multiline=False, input_filter='float', size_hint_x=None, width=dp(85))
+        options.add_widget(Label(text='Minutes:', size_hint_x=None, width=dp(75)))
+        self.interval_input = TextInput(text=saved.get('minutes', '1'), multiline=False, input_filter='float', input_type='number', size_hint_x=None, width=dp(85))
         options.add_widget(self.interval_input)
-        self.shuffle_button = Button(text='Shuffle: ON')
-        self.shuffle = True
+        self.shuffle = saved.get('shuffle', True)
+        self.shuffle_button = Button(text='Shuffle: ON' if self.shuffle else 'Shuffle: OFF')
         self.shuffle_button.bind(on_release=self.toggle_shuffle)
         options.add_widget(self.shuffle_button)
         root.add_widget(options)
@@ -145,8 +152,47 @@ class ScreenFlow(App):
             button.bind(on_release=lambda _, a=action: self.native_rotation(a))
             native.add_widget(button)
         root.add_widget(native)
+        extra = BoxLayout(size_hint_y=None, height=dp(42), spacing=dp(4))
+        self.background_mode = Spinner(text=saved.get('background_mode', 'XS only'), values=('XS only','Images only','Both'))
+        self.policy = Spinner(text=saved.get('policy','Immediate'), values=('Immediate','Home only','Idle','On unlock'))
+        self.image_interval = TextInput(text=saved.get('image_minutes','5'), multiline=False, input_filter='float', input_type='number')
+        extra.add_widget(self.background_mode)
+        extra.add_widget(self.policy)
+        extra.add_widget(Label(text='Image min'))
+        extra.add_widget(self.image_interval)
+        root.add_widget(extra)
+        self.idle_input = TextInput(text=saved.get('idle_seconds','60'), multiline=False, input_filter='int', input_type='number', size_hint_y=None, height=dp(36), hint_text='Idle seconds')
+        root.add_widget(self.idle_input)
+        self.auto_xpath = saved.get('automatic', False)
+        auto = Button(text='Auto XPath: ON' if self.auto_xpath else 'Auto XPath: OFF', size_hint_y=None, height=dp(38))
+        def toggle_auto(button):
+            self.auto_xpath = not self.auto_xpath
+            button.text = 'Auto XPath: ON' if self.auto_xpath else 'Auto XPath: OFF'
+            self.save_settings()
+        auto.bind(on_release=toggle_auto)
+        root.add_widget(auto)
+        self.xpath_input = TextInput(text=saved.get("xpath", DEFAULT_XPATH), multiline=False, size_hint_y=None, height=dp(38))
+        root.add_widget(self.xpath_input)
+        save = Button(text='Save settings', size_hint_y=None, height=dp(38))
+        save.bind(on_release=lambda *_: self.save_settings(report=True))
+        root.add_widget(save)
+        settings = Button(text='Enable Android accessibility service', size_hint_y=None, height=dp(38))
+        settings.bind(on_release=self.open_accessibility)
+        root.add_widget(settings)
+        for field in (self.interval_input, self.folder_input, self.xpath_input, self.image_interval, self.idle_input):
+            field.bind(focus=lambda widget, focused: self.save_settings() if not focused else None)
+        for field in (self.background_mode, self.policy):
+            field.bind(text=lambda *_: self.save_settings())
         Clock.schedule_interval(self.tick, 0.25)
         return root
+
+    def open_accessibility(self, *_):
+        if platform == 'android':
+            try:
+                from jnius import autoclass
+                autoclass('org.kivy.android.PythonActivity').mActivity.startActivity(autoclass('android.content.Intent')('android.settings.ACCESSIBILITY_SETTINGS'))
+            except Exception as exc:
+                self.module_status.text = str(exc)
 
     def native_rotation(self, action):
         if platform != 'android':
@@ -162,6 +208,15 @@ class ScreenFlow(App):
                 self.xs_clock.stop()
                 self.xs_timer_button.text = 'Timer: OFF'
                 intent.putExtra('interval', int(min(86400, self.read_interval()) * 1000))
+                intent.putExtra('automatic', self.auto_xpath)
+                intent.putExtra('mode', self.background_mode.text)
+                intent.putExtra('policy', self.policy.text)
+                intent.putExtra('image_interval', int(self.numeric(self.image_interval, 5, .5, 1440)*60000))
+                intent.putExtra('idle_seconds', int(self.numeric(self.idle_input, 60, 10, 3600)))
+                intent.putExtra('folder', self.folder_input.text.strip())
+                intent.putExtra('shuffle', self.shuffle)
+                intent.putExtra('xpath', self.xpath_input.text.strip())
+                self.save_settings()
                 activity.startForegroundService(intent)
                 self.module_status.text = 'Background rotation requested; tap notification Apply to confirm.'
             else:
@@ -210,6 +265,7 @@ class ScreenFlow(App):
     def toggle_shuffle(self, *_):
         self.shuffle = not self.shuffle
         self.shuffle_button.text = 'Shuffle: ON' if self.shuffle else 'Shuffle: OFF'
+        self.save_settings()
         self.reshuffle()
 
     def next_image(self):
@@ -235,11 +291,8 @@ class ScreenFlow(App):
         if not self.files:
             return
         if not self.running:
-            try:
-                self.interval = max(1.0, float(self.interval_input.text))
-            except ValueError:
-                self.interval = 30.0
-                self.interval_input.text = '30'
+            self.interval = self.read_interval()
+            self.save_settings()
             if self.started_at is None:
                 self.started_at = time.monotonic()
             self.running = True
@@ -287,10 +340,8 @@ class ScreenFlow(App):
             self.discover_xs()
         if not self.xs_queue.items:
             return
-        try:
-            seconds = float(self.interval_input.text)
-        except ValueError:
-            seconds = 60
+        seconds = self.read_interval()
+        self.save_settings()
         self.xs_clock.start(seconds)
         self.xs_timer_button.text = 'Timer: ON'
         self.module_status.text = 'Timer armed; Android confirmation still required for each wallpaper change'
@@ -323,8 +374,52 @@ class ScreenFlow(App):
             self.module_deadline = time.monotonic() + self.read_interval()
 
     def read_interval(self):
-        try: return max(1., float(self.interval_input.text))
-        except (TypeError, ValueError): return 30.
+        try:
+            minutes = float(self.interval_input.text)
+            if not math.isfinite(minutes) or not 0.5 <= minutes <= 1440:
+                raise ValueError('Interval must be 0.5–1440 minutes')
+            return minutes * 60
+        except (TypeError, ValueError):
+            self.interval_input.text = '1'
+            return 60.0
+
+    def numeric(self, field, default, low, high):
+        try:
+            value = float(field.text)
+            if not math.isfinite(value) or not low <= value <= high: raise ValueError()
+            return value
+        except ValueError:
+            field.text = str(default)
+            return default
+
+    def load_settings(self):
+        try:
+            data = json.loads(self.settings_path.read_text(encoding='utf-8'))
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def save_settings(self, report=False):
+        try:
+            minutes = self.read_interval() / 60
+            data = dict(minutes=format(minutes, '.10g'), folder=self.folder_input.text,
+                        shuffle=self.shuffle, automatic=self.auto_xpath,
+                        background_mode=self.background_mode.text, policy=self.policy.text,
+                        image_minutes=str(self.numeric(self.image_interval,5,.5,1440)),
+                        idle_seconds=str(int(self.numeric(self.idle_input,60,10,3600))),
+                        xpath=self.xpath_input.text.strip() or DEFAULT_XPATH)
+            self.settings_path.parent.mkdir(parents=True, exist_ok=True)
+            temp = self.settings_path.with_suffix('.tmp')
+            temp.write_text(json.dumps(data, indent=2), encoding='utf-8')
+            os.replace(temp, self.settings_path)
+            if report:
+                self.module_status.text = 'Settings saved; restart background rotation to apply changes.'
+        except Exception as exc:
+            self.module_status.text = 'Settings save failed: ' + str(exc)
+
+    def on_pause(self):
+        self.save_settings()
+        return True
 
     def toggle_modules(self, *_):
         self.module_running = not self.module_running
@@ -357,6 +452,7 @@ class ScreenFlow(App):
                                  f'{status} · Shown {self.transitions} · {elapsed}s elapsed · {remaining}s next')
 
     def on_stop(self):
+        self.save_settings()
         self.notifier.clear()
 
 if __name__ == '__main__':
