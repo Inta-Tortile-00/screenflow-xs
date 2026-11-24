@@ -59,6 +59,9 @@ class Notifier:
             builder.setContentTitle(title)
             builder.setContentText(detail)
             builder.setOngoing(True)
+            actions = self.autoclass('org.example.screenflow.ModuleActions')
+            pending = self.autoclass('android.app.PendingIntent')
+            builder.setContentIntent(pending.getActivity(self.context, 9, actions.settingsIntent(self.context), 0x0C000000))
             builder.setOnlyAlertOnce(True)
             self.manager.notify(4821, builder.build())
         except Exception as exc:
@@ -136,8 +139,8 @@ class ScreenFlow(App):
         self.module_status = Label(text='Module queue is a controller preview; automatic XS module switching is not yet supported.', font_size='12sp')
         xs.add_widget(self.module_status)
         xs_actions = BoxLayout(size_hint_y=None, height=dp(45), spacing=dp(3))
-        for name, handler in [('Discover', self.discover_xs), ('Next', self.next_xs), ('Timer: OFF', self.toggle_xs_timer), ('Mode', self.toggle_xs_mode)]:
-            b = Button(text=name, font_size='12sp')
+        for name, handler in [('Discover', self.discover_xs), ('Load Screensaver Now', self.load_screensaver_now), ('Timer: OFF', self.toggle_xs_timer), ('Mode', self.toggle_xs_mode)]:
+            b = Button(text=name, font_size='11sp', size_hint_x=2.3 if name == 'Load Screensaver Now' else 1)
             b.bind(on_release=handler)
             xs_actions.add_widget(b)
             if name.startswith('Timer:'): self.xs_timer_button = b
@@ -316,6 +319,20 @@ class ScreenFlow(App):
         self.xs_mode = 'dream' if self.xs_mode == 'wallpaper' else 'wallpaper'
         self.discover_xs()
         self.module_status.text = 'Mode: ' + self.xs_mode + ' — ' + self.module_status.text
+
+    def load_screensaver_now(self, *_):
+        if platform != 'android':
+            self.module_status.text = 'Android only'
+            return
+        try:
+            from jnius import autoclass
+            activity = autoclass('org.kivy.android.PythonActivity').mActivity
+            snapshot = Path(str(activity.getFilesDir().getAbsolutePath())) / 'next-xs.txt'
+            module = snapshot.read_text(encoding='utf-8').strip() if snapshot.exists() else ''
+            actions = autoclass('org.example.screenflow.ModuleActions')
+            self.module_status.text = str(actions.openScreensaver(activity, module))
+        except Exception as exc:
+            self.module_status.text = str(exc)
 
     def next_xs(self, *_):
         klass = self.xs_queue.next()

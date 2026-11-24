@@ -58,3 +58,6 @@ Diagnostics: `adb logcat -s ScreenFlow AndroidRuntime`.
 - App settings are saved privately in settings.json, automatically and via Save settings. Restart background rotation to apply edits to the native service.
 - Only the primary wallpaper XPath is executed; secondary selector removed. Picker still takes foreground focus.
 - Existing native rotation state is retained; UI settings start with defaults on first upgrade.
+
+## v0.5.5 standalone screensaver
+After installing, grant the optional permission with `adb shell pm grant org.example.screenflow android.permission.WRITE_SECURE_SETTINGS`. Start XS background rotation to populate the upcoming queue snapshot. Load Screensaver Now selects the matching DreamService and launches SystemUI Somnambulator. The system screensaver selection persists; the wallpaper queue is not consumed by this action. If launch throws an exception, the previous selection is restored where possible. ADB success does not guarantee app-level launch permission.
